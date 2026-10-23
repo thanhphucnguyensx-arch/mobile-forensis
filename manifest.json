@@ -2,7 +2,7 @@
   "name": "TrueVision AI - Deepfake Detection",
   "short_name": "TrueVision AI",
   "description": "Professional Deepfake Detection & Digital Forensics Tool",
-  "start_url": "./truevision-ai.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#030712",
   "theme_color": "#030712",

@@ -1,0 +1,28 @@
+{
+  "name": "TrueVision AI - Deepfake Detection",
+  "short_name": "TrueVision AI",
+  "description": "Professional Deepfake Detection & Digital Forensics Tool",
+  "start_url": "./truevision-ai.html",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#030712",
+  "orientation": "portrait",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1001/1001328.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1001/1001328.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "security", "productivity"],
+  "lang": "vi",
+  "dir": "ltr"
+}

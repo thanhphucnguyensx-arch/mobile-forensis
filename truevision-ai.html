@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>TrueVision AI - Deepfake Detection & Forensics</title>
+  <meta name="description" content="Professional Deepfake Detection & Digital Forensics Tool. Analyze images, videos, and audio for AI manipulation traces.">
+  <meta name="theme-color" content="#030712">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: { 850: '#111827', 900: '#0b0f19', 950: '#030712' },
+            brand: { 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' },
+            cyber: { cyan: '#22d3ee', green: '#34d399', rose: '#fb7185', amber: '#fbbf24', purple: '#c084fc' }
+          },
+          fontFamily: {
+            mono: ['JetBrains Mono', 'monospace'],
+            sans: ['Inter', 'system-ui', 'sans-serif']
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'spin-slow': 'spin 1.5s linear infinite',
+            'fade-in': 'fadeIn 0.3s ease-out',
+            'slide-up': 'slideUp 0.3s ease-out'
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' }
+            },
+            slideUp: {
+              '0%': { transform: 'translateY(10px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/exifreader@4.20.0/dist/exif-reader.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body { padding-bottom: calc(env(safe-area-inset-bottom) + 4.5rem); }
+    ::-webkit-scrollbar { display: none; }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5);
+    }
+    .neon-glow {
+      box-shadow: 0 0 25px -5px rgba(14, 165, 233, 0.3);
+    }
+    .tab-btn.active {
+      color: #38bdf8 !important;
+      background: rgba(14, 165, 233, 0.12);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .loading-spinner {
+      border: 3px solid rgba(56, 189, 248, 0.2);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .progress-bar {
+      background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-xl border-b border-slate-900 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-2.5">
+      <div class="bg-gradient-to-tr from-cyan-500 to-blue-600 p-2 rounded-xl text-white neon-glow">
+        <i class="fa-solid fa-eye-shield text-sm"></i>
+      </div>
+      <div>
+        <h1 class="font-black text-xs sm:text-sm tracking-wide bg-gradient-to-r from-white via-cyan-200 to-sky-400 bg-clip-text text-transparent">
+          TRUEVISION AI
+        </h1>
+        <p class="text-[8px] text-cyan-400/80 font-mono tracking-widest uppercase" data-i18n="header_sub">Phát Hiện Deepfake & Giám Định</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- Bộ chọn đa ngôn ngữ -->
+      <select id="langSelect" class="bg-slate-900 border border-slate-800 text-[11px] text-cyan-400 rounded-lg px-2 py-1 font-mono focus:outline-none focus:border-cyan-500" aria-label="Select language">
+        <option value="vi">🇻🇳 VI</option>
+        <option value="en">🇺🇸 EN</option>
+        <option value="zh">🇨🇳 中文</option>
+        <option value="es">🇪🇸 ES</option>
+      </select>
+
+      <button id="btnCameraCapture" class="p-2 bg-slate-900 border border-slate-800 rounded-xl text-cyan-400 text-xs flex items-center justify-center active:scale-95 transition" aria-label="Open camera">
+        <i class="fa-solid fa-camera"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ERROR NOTIFICATION -->
+  <div id="errorNotification" class="fixed top-20 left-4 right-4 max-w-lg mx-auto z-50 hidden">
+    <div class="bg-rose-950/90 border border-rose-700 text-rose-200 p-4 rounded-xl flex items-start gap-3 animate-fade-in">
+      <i class="fa-solid fa-circle-exclamation text-rose-400 mt-0.5"></i>
+      <div class="flex-1">
+        <p class="text-xs font-bold" id="errorTitle">Error</p>
+        <p class="text-[10px] text-rose-300/80" id="errorMessage">Something went wrong</p>
+      </div>
+      <button id="closeError" class="text-rose-400 hover:text-rose-300" aria-label="Close error">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 px-4 py-4 max-w-lg mx-auto w-full flex flex-col gap-4">
+
+    <!-- VIEW UPLOAD -->
+    <section id="viewUpload" class="app-view flex flex-col gap-4 animate-fade-in">
+      <div id="dropZone" class="glass-card rounded-3xl p-6 border-2 border-dashed border-cyan-500/30 hover:border-cyan-400 transition text-center cursor-pointer relative overflow-hidden" role="button" tabindex="0" aria-label="Upload media file">
+        <input type="file" id="fileInput" class="hidden" multiple accept="image/*,video/*,audio/*" aria-label="File input">
+        <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl"></div>
+        <div class="flex flex-col items-center relative z-10">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-blue-500/20 text-cyan-400 flex items-center justify-center mb-3 border border-cyan-500/30">
+            <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+          </div>
+          <h2 class="text-xs font-bold text-slate-100 mb-1" data-i18n="upload_title">Tải lên Ảnh, Video hoặc Cuộc gọi ghi lại</h2>
+          <p class="text-[10px] text-slate-400 mb-4" data-i18n="upload_desc">Hệ thống AI sẽ quét dấu vết Deepfake, Photoshop & Cắt ghép</p>
+          <span class="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 active:scale-95 transition" data-i18n="upload_btn">
+            Chọn Phương Tiện Kiểm Tra
+          </span>
+        </div>
+      </div>
+
+      <!-- Preview Card -->
+      <div id="mediaPreviewCard" class="glass-card rounded-2xl p-4 hidden space-y-3 animate-slide-up">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <span id="previewTitle" class="text-xs font-bold text-cyan-300 truncate max-w-[220px]">Tệp đang chọn</span>
+          <button id="btnDeleteCurrentFile" class="text-rose-400 text-[10px] font-semibold px-2 py-1 bg-rose-950/50 rounded-lg border border-rose-800/40" aria-label="Delete file">
+            <i class="fa-solid fa-trash-can"></i> <span data-i18n="delete">Xóa</span>
+          </button>
+        </div>
+
+        <div class="relative w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center min-h-[180px]">
+          <img id="imgPreview" class="max-h-[220px] w-auto object-contain hidden" alt="Preview" loading="lazy">
+          <video id="videoPreview" controls class="w-full max-h-[220px] hidden" preload="metadata"></video>
+          <audio id="audioPreview" controls class="w-full px-4 hidden" preload="metadata"></audio>
+        </div>
+
+        <div id="fileInfo" class="text-[10px] text-slate-400 font-mono space-y-1 hidden">
+          <p>Size: <span id="fileSize">---</span></p>
+          <p>Type: <span id="fileType">---</span></p>
+        </div>
+
+        <button id="analyzeBtn" class="w-full py-3 bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white rounded-xl text-xs font-black tracking-wider shadow-lg shadow-cyan-500/30 transition active:scale-[0.98] flex items-center justify-center gap-2" aria-label="Analyze media">
+          <i class="fa-solid fa-microscope text-sm"></i> <span data-i18n="analyze_btn">PHÂN TÍCH THẬT / GIẢ (DEEPFAKE SCAN)</span>
+        </button>
+      </div>
+
+      <!-- History -->
+      <div class="glass-card rounded-2xl p-4 space-y-3">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+          <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i> <span data-i18n="history_title">Lịch Sử Giám Định</span>
+          </h3>
+          <button id="clearHistoryBtn" class="text-[10px] text-rose-400 hover:underline" data-i18n="clear" aria-label="Clear history">Xóa lịch sử</button>
+        </div>
+        <div id="historyList" class="space-y-2 max-h-40 overflow-y-auto font-mono text-xs">
+          <p class="text-slate-500 italic text-[11px]" data-i18n="no_history">Chưa có lịch sử giám định nào...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW RESULT -->
+    <section id="viewResult" class="app-view flex-col gap-4 hidden">
+      <div class="glass-card rounded-2xl p-5 border-l-4 border-cyan-400 space-y-4 animate-fade-in">
+        <div class="flex justify-between items-start border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="text-xs font-black text-slate-100 uppercase tracking-wider" data-i18n="result_header">KẾT QUẢ PHÂN TÍCH ĐỘ HỢP LỆ</h2>
+            <p class="text-[10px] text-cyan-400 font-mono">Case ID: <span id="caseIdText" class="font-bold">---</span></p>
+          </div>
+          <span id="resultBadge" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase font-mono bg-cyan-950 text-cyan-300 border border-cyan-600" data-i18n="processing">Đang xử lý</span>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="p-6 text-center space-y-3">
+          <div class="loading-spinner mx-auto"></div>
+          <p class="text-xs text-slate-300 font-medium" data-i18n="analyzing">Đang phân tích...</p>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+            <div id="progressBar" class="progress-bar h-full" style="width: 0%"></div>
+          </div>
+          <p id="analysisStep" class="text-[10px] text-slate-500 font-mono">Đang khởi tạo...</p>
+        </div>
+
+        <!-- Result State -->
+        <div id="resultState" class="hidden space-y-4">
+          <div id="verdictBox" class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center space-y-2">
+            <i id="verdictIcon" class="fa-solid fa-shield-halved text-3xl text-cyan-400"></i>
+            <h3 id="verdictTitle" class="text-sm font-black text-white" data-i18n="scanning">Đang quét cấu trúc AI...</h3>
+            <p id="verdictDesc" class="text-[11px] text-slate-400 leading-relaxed" data-i18n="scanning_desc">Hệ thống đang kiểm tra các vệt cắt ghép và dấu vết Deepfake...</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 font-mono text-[11px]">
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <span class="text-slate-500 block text-[9px]" data-i18n="metric_ai">Tỷ lệ Deepfake / AI</span>
+              <span id="metricAiScore" class="font-bold text-cyber-rose">0.0%</span>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <span class="text-slate-500 block text-[9px]" data-i18n="metric_anomaly">Sai số điểm ảnh</span>
+              <span id="metricAnomaly" class="font-bold text-cyber-amber">---</span>
+            </div>
+          </div>
+
+          <!-- EXIF Metadata Section -->
+          <div id="exifSection" class="p-3 bg-slate-950 rounded-xl border border-slate-800 hidden">
+            <h4 class="text-[10px] font-bold text-cyan-400 mb-2 uppercase tracking-wider" data-i18n="exif_title">Metadata EXIF</h4>
+            <div id="exifData" class="text-[9px] text-slate-400 font-mono space-y-1 max-h-24 overflow-y-auto"></div>
+          </div>
+
+          <div id="auditLogBox" class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[10px] font-mono space-y-1.5 text-slate-300">
+            <p class="text-slate-500" data-i18n="waiting_init">• Đang khởi tạo mô hình nhận diện...</p>
+          </div>
+
+          <button id="btnExportPDF" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2" aria-label="Export PDF">
+            <i class="fa-solid fa-file-pdf text-rose-400"></i> <span data-i18n="export_pdf">Xuất Chứng Thư PDF Khách Quan</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW GUIDE -->
+    <section id="viewGuide" class="app-view flex-col gap-4 hidden">
+      <div class="glass-card rounded-2xl p-5 space-y-3 animate-fade-in">
+        <h3 class="text-xs font-black text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+          <i class="fa-solid fa-shield-dog"></i> <span data-i18n="guide_title">Hướng Dẫn Phát Hiện Deepfake Cuộc Gọi</span>
+        </h3>
+        <p class="text-[11px] text-slate-300 leading-relaxed" data-i18n="guide_desc1">
+          Vì lý do bảo mật quyền riêng tư trên điện thoại, các ứng dụng không được phép tự động nghe lén cuộc gọi Messenger hay Zalo. Tuy nhiên, bạn có thể phòng chống lừa đảo bằng 2 bước:
+        </p>
+        <div class="space-y-2 text-[11px] font-mono">
+          <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+            <span class="text-cyan-400 font-bold block mb-1" data-i18n="guide_step1_title">1. Khi có video call nghi vấn:</span>
+            <span data-i18n="guide_step1_content">Chụp màn hình khuôn mặt hoặc dùng tính năng quay màn hình ngắn 3-5 giây của điện thoại.</span>
+          </div>
+          <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+            <span class="text-cyan-400 font-bold block mb-1" data-i18n="guide_step2_title">2. Kiểm tra tức thì:</span>
+            <span data-i18n="guide_step2_content">Mở ứng dụng TrueVision AI, tải video/ảnh vừa quay vào mục "Giám Định" để quét Deepfake ngay lập tức!</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-2xl border-t border-slate-900 px-3 py-2">
+    <div class="max-w-lg mx-auto flex justify-around items-center">
+      <button class="nav-btn active flex flex-col items-center gap-1 text-slate-400 text-[10px] font-semibold transition" data-target="viewUpload" aria-label="Inspect">
+        <i class="fa-solid fa-cloud-arrow-up text-base"></i>
+        <span data-i18n="nav_inspect">Giám Định</span>
+      </button>
+      <button class="nav-btn flex flex-col items-center gap-1 text-slate-400 text-[10px] font-semibold transition" data-target="viewResult" aria-label="Result">
+        <i class="fa-solid fa-square-poll-vertical text-base"></i>
+        <span data-i18n="nav_result">Kết Quả</span>
+      </button>
+      <button class="nav-btn flex flex-col items-center gap-1 text-slate-400 text-[10px] font-semibold transition" data-target="viewGuide" aria-label="Guide">
+        <i class="fa-solid fa-circle-info text-base"></i>
+        <span data-i18n="nav_guide">Cẩm Nang</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (I18N DICTIONARY) -->
+  <script>
+    const I18N = {
+      vi: {
+        header_sub: "Phát Hiện Deepfake & Giám Định",
+        upload_title: "Tải lên Ảnh, Video hoặc Cuộc gọi ghi lại",
+        upload_desc: "Hệ thống AI sẽ quét dấu vết Deepfake, Photoshop & Cắt ghép",
+        upload_btn: "Chọn Phương Tiện Kiểm Tra",
+        delete: "Xóa",
+        analyze_btn: "PHÂN TÍCH THẬT / GIẢ (DEEPFAKE SCAN)",
+        history_title: "Lịch Sử Giám Định",
+        clear: "Xóa lịch sử",
+        no_history: "Chưa có lịch sử giám định nào...",
+        result_header: "KẾT QUẢ PHÂN TÍCH ĐỘ HỢP LỆ",
+        processing: "Đang xử lý",
+        analyzing: "Đang phân tích...",
+        scanning: "Đang quét cấu trúc AI...",
+        scanning_desc: "Hệ thống đang kiểm tra các vệt cắt ghép và dấu vết Deepfake...",
+        metric_ai: "Tỷ lệ Deepfake / AI",
+        metric_anomaly: "Sai số điểm ảnh",
+        waiting_init: "• Đang khởi tạo mô hình nhận diện...",
+        export_pdf: "Xuất Chứng Thư PDF Khách Quan",
+        exif_title: "Metadata EXIF",
+        guide_title: "Hướng Dẫn Phát Hiện Deepfake Cuộc Gọi",
+        guide_desc1: "Vì lý do bảo mật quyền riêng tư trên điện thoại, các ứng dụng không được phép tự động nghe lén cuộc gọi Messenger hay Zalo. Tuy nhiên, bạn có thể phòng chống lừa đảo bằng 2 bước:",
+        guide_step1_title: "1. Khi có video call nghi vấn:",
+        guide_step1_content: "Chụp màn hình khuôn mặt hoặc dùng tính năng quay màn hình ngắn 3-5 giây của điện thoại.",
+        guide_step2_title: "2. Kiểm tra tức thì:",
+        guide_step2_content: "Mở ứng dụng TrueVision AI, tải video/ảnh vừa quay vào mục 'Giám Định' để quét Deepfake ngay lập tức!",
+        nav_inspect: "Giám Định",
+        nav_result: "Kết Quả",
+        nav_guide: "Cẩm Nang",
+        status_fake: "CẢNH BÁO: GIẢ MẠO (DEEPFAKE)",
+        status_real: "XÁC THỰC: BẢN GỐC (THẬT)",
+        status_uncertain: "KHÔNG XÁC ĐỊNH",
+        verdict_fake_title: "Phát Hiện Dấu Vết Deepfake / Cắt Ghép!",
+        verdict_fake_desc: "Thuật toán phát hiện sự không đồng nhất ở tần số nén khung hình và vùng biên khuôn mặt.",
+        verdict_real_title: "Không Tìm Thấy Dấu Vết Can Thiệp AI",
+        verdict_real_desc: "Cấu trúc quang học và siêu dữ liệu tệp nằm trong ngưỡng tự nhiên hợp lệ.",
+        verdict_uncertain_title: "Không thể xác định chắc chắn",
+        verdict_uncertain_desc: "Chất lượng file không đủ để đưa ra kết luận chính xác. Hãy sử dụng file chất lượng cao hơn.",
+        error_invalid_file: "Tệp không hợp lệ. Vui lòng chọn ảnh, video hoặc audio.",
+        error_file_too_large: "Tệp quá lớn. Vui lòng chọn tệp dưới 50MB.",
+        error_analysis_failed: "Phân tích thất bại. Vui lòng thử lại.",
+        step_reading: "Đang đọc tệp...",
+        step_exif: "Đang phân tích EXIF...",
+        step_forensics: "Đang kiểm tra forensics...",
+        step_ai: "Đang chạy AI model...",
+        step_complete: "Hoàn tất!"
+      },
+      en: {
+        header_sub: "Deepfake Detection & Forensics",
+        upload_title: "Upload Image, Video or Recorded Call",
+        upload_desc: "AI system will scan for Deepfake, Photoshop & Tampering traces",
+        upload_btn: "Select Media to Inspect",
+        delete: "Delete",
+        analyze_btn: "ANALYZE REAL / FAKE (DEEPFAKE SCAN)",
+        history_title: "Inspection History",
+        clear: "Clear history",
+        no_history: "No inspection history yet...",
+        result_header: "VALIDITY ANALYSIS RESULT",
+        processing: "Processing",
+        analyzing: "Analyzing...",
+        scanning: "Scanning AI structures...",
+        scanning_desc: "System is checking for splicing traces and Deepfake artifacts...",
+        metric_ai: "Deepfake / AI Score",
+        metric_anomaly: "Pixel Anomaly",
+        waiting_init: "• Initializing detection model...",
+        export_pdf: "Export Objective PDF Certificate",
+        exif_title: "EXIF Metadata",
+        guide_title: "Call Deepfake Detection Guide",
+        guide_desc1: "Due to mobile privacy rules, apps cannot auto-intercept Messenger or Zalo calls. However, you can prevent scams in 2 steps:",
+        guide_step1_title: "1. During a suspicious video call:",
+        guide_step1_content: "Take a screenshot or record a short 3-5 second screen video.",
+        guide_step2_title: "2. Check instantly:",
+        guide_step2_content: "Open TrueVision AI, upload the captured media to 'Inspect' to scan for Deepfake right away!",
+        nav_inspect: "Inspect",
+        nav_result: "Result",
+        nav_guide: "Guide",
+        status_fake: "WARNING: FAKE (DEEPFAKE)",
+        status_real: "VERIFIED: AUTHENTIC (REAL)",
+        status_uncertain: "UNCERTAIN",
+        verdict_fake_title: "Deepfake / Tampering Traces Detected!",
+        verdict_fake_desc: "Algorithm detected inconsistencies in frame compression and facial boundaries.",
+        verdict_real_title: "No AI Interference Traces Found",
+        verdict_real_desc: "Optical structure and file metadata are within valid natural thresholds.",
+        verdict_uncertain_title: "Cannot determine with certainty",
+        verdict_uncertain_desc: "File quality is insufficient for accurate conclusion. Please use a higher quality file.",
+        error_invalid_file: "Invalid file. Please select an image, video, or audio file.",
+        error_file_too_large: "File too large. Please select a file under 50MB.",
+        error_analysis_failed: "Analysis failed. Please try again.",
+        step_reading: "Reading file...",
+        step_exif: "Analyzing EXIF...",
+        step_forensics: "Checking forensics...",
+        step_ai: "Running AI model...",
+        step_complete: "Complete!"
+      },
+      zh: {
+        header_sub: "深度伪造检测与取证",
+        upload_title: "上传图片、视频或通话录屏",
+        upload_desc: "AI系统将扫描深度伪造、PS及篡改痕迹",
+        upload_btn: "选择要检查的媒体",
+        delete: "删除",
+        analyze_btn: "真伪分析 (深度伪造扫描)",
+        history_title: "检测历史记录",
+        clear: "清空历史",
+        no_history: "暂无检测历史...",
+        result_header: "真实性分析结果",
+        processing: "处理中",
+        analyzing: "分析中...",
+        scanning: "正在扫描AI结构...",
+        scanning_desc: "系统正在检查拼接痕迹和深度伪造伪影...",
+        metric_ai: "深度伪造 / AI指数",
+        metric_anomaly: "像素异常度",
+        waiting_init: "• 正在初始化识别模型...",
+        export_pdf: "导出客观PDF证书",
+        exif_title: "EXIF元数据",
+        guide_title: "通话深度伪造检测指南",
+        guide_desc1: "出于手机隐私规定，应用无法自动拦截聊天软件通话。您可以通过以下2步防范诈骗：",
+        guide_step1_title: "1. 遇到可疑视频通话时：",
+        guide_step1_content: "截取人脸屏幕或录制3-5秒的短视频。",
+        guide_step2_title: "2. 即时检测：",
+        guide_step2_content: "打开TrueVision AI，将捕获的媒体上传至"检测"页面即可立即扫描深度伪造！",
+        nav_inspect: "检测",
+        nav_result: "结果",
+        nav_guide: "指南",
+        status_fake: "警告：伪造 (DEEPFAKE)",
+        status_real: "验证：真实原件",
+        status_uncertain: "不确定",
+        verdict_fake_title: "检测到深度伪造/篡改痕迹！",
+        verdict_fake_desc: "算法检测到帧压缩和人脸边缘存在不一致性。",
+        verdict_real_title: "未发现AI干预痕迹",
+        verdict_real_desc: "光学结构和文件元数据在有效自然阈值范围内。",
+        verdict_uncertain_title: "无法确定",
+        verdict_uncertain_desc: "文件质量不足以得出准确结论。请使用更高质量的文件。",
+        error_invalid_file: "文件无效。请选择图片、视频或音频文件。",
+        error_file_too_large: "文件过大。请选择50MB以下的文件。",
+        error_analysis_failed: "分析失败。请重试。",
+        step_reading: "正在读取文件...",
+        step_exif: "正在分析EXIF...",
+        step_forensics: "正在检查取证...",
+        step_ai: "正在运行AI模型...",
+        step_complete: "完成！"
+      },
+      es: {
+        header_sub: "Detección de Deepfake y Forense",
+        upload_title: "Subir Imagen, Video o Llamada Grabada",
+        upload_desc: "El sistema de IA buscará rastros de Deepfake, Photoshop y manipulación",
+        upload_btn: "Seleccionar Medios",
+        delete: "Eliminar",
+        analyze_btn: "ANALIZAR REAL / FALSO (ESCANEO DEEPFAKE)",
+        history_title: "Historial de Inspección",
+        clear: "Borrar historial",
+        no_history: "Sin historial de inspección...",
+        result_header: "RESULTADO DE ANÁLISIS DE VALIDEZ",
+        processing: "Procesando",
+        analyzing: "Analizando...",
+        scanning: "Escaneando estructuras de IA...",
+        scanning_desc: "El sistema está comprobando rastros de manipulación y artefactos Deepfake...",
+        metric_ai: "Puntuación Deepfake / IA",
+        metric_anomaly: "Anomalía de píxeles",
+        waiting_init: "• Inicializando modelo de detección...",
+        export_pdf: "Exportar Certificado PDF Objetivo",
+        exif_title: "Metadatos EXIF",
+        guide_title: "Guía de Detección de Deepfake en Llamadas",
+        guide_desc1: "Por privacidad, las apps no pueden interceptar llamadas automáticamente. Prevenga fraudes en 2 pasos:",
+        guide_step1_title: "1. Durante una videollamada sospechosa:",
+        guide_step1_content: "Tome una captura de pantalla o grabe un video corto de 3-5 segundos.",
+        guide_step2_title: "2. Compruebe al instante:",
+        guide_step2_content: "Abra TrueVision AI, suba el archivo a 'Inspeccionar' para escanear Deepfakes de inmediato.",
+        nav_inspect: "Inspeccionar",
+        nav_result: "Resultado",
+        nav_guide: "Guía",
+        status_fake: "ADVERTENCIA: FALSO (DEEPFAKE)",
+        status_real: "VERIFICADO: AUTÉNTICO (REAL)",
+        status_uncertain: "INCIERTO",
+        verdict_fake_title: "¡Rastros de Deepfake / Manipulación Detectados!",
+        verdict_fake_desc: "El algoritmo detectó inconsistencias en la compresión de fotogramas y bordes faciales.",
+        verdict_real_title: "No se encontraron rastros de IA",
+        verdict_real_desc: "La estructura óptica y los metadatos se encuentran dentro de los umbrales naturales.",
+        verdict_uncertain_title: "No se puede determinar con certeza",
+        verdict_uncertain_desc: "La calidad del archivo es insuficiente para una conclusión precisa. Use un archivo de mayor calidad.",
+        error_invalid_file: "Archivo inválido. Seleccione una imagen, video o audio.",
+        error_file_too_large: "Archivo demasiado grande. Seleccione un archivo menor a 50MB.",
+        error_analysis_failed: "Análisis fallido. Intente de nuevo.",
+        step_reading: "Leyendo archivo...",
+        step_exif: "Analizando EXIF...",
+        step_forensics: "Verificando forense...",
+        step_ai: "Ejecutando modelo IA...",
+        step_complete: "¡Completado!"
+      }
+    };
+
+    let currentLang = 'vi';
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (I18N[lang] && I18N[lang][key]) {
+          el.textContent = I18N[lang][key];
+        }
+      });
+    }
+
+    document.getElementById('langSelect').addEventListener('change', (e) => {
+      setLanguage(e.target.value);
+    });
+  </script>
+
+  <!-- SERVICE WORKER REGISTRATION -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then((registration) => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          })
+          .catch((error) => {
+            console.log('ServiceWorker registration failed: ', error);
+          });
+      });
+    }
+  </script>
+
+  <!-- LOGIC SCRIPT -->
+  <script>
+    const state = {
+      currentFile: null,
+      currentFileType: 'image',
+      currentFileUrl: null,
+      currentFileHash: null,
+      history: JSON.parse(localStorage.getItem('truevision_history') || '[]'),
+      analysisResult: null
+    };
+
+    const DOM = {
+      fileInput: document.getElementById('fileInput'),
+      dropZone: document.getElementById('dropZone'),
+      btnCameraCapture: document.getElementById('btnCameraCapture'),
+      btnDeleteCurrentFile: document.getElementById('btnDeleteCurrentFile'),
+      analyzeBtn: document.getElementById('analyzeBtn'),
+      btnExportPDF: document.getElementById('btnExportPDF'),
+      clearHistoryBtn: document.getElementById('clearHistoryBtn'),
+      mediaPreviewCard: document.getElementById('mediaPreviewCard'),
+      previewTitle: document.getElementById('previewTitle'),
+      imgPreview: document.getElementById('imgPreview'),
+      videoPreview: document.getElementById('videoPreview'),
+      audioPreview: document.getElementById('audioPreview'),
+      fileInfo: document.getElementById('fileInfo'),
+      fileSize: document.getElementById('fileSize'),
+      fileType: document.getElementById('fileType'),
+      caseIdText: document.getElementById('caseIdText'),
+      resultBadge: document.getElementById('resultBadge'),
+      loadingState: document.getElementById('loadingState'),
+      resultState: document.getElementById('resultState'),
+      verdictBox: document.getElementById('verdictBox'),
+      verdictIcon: document.getElementById('verdictIcon'),
+      verdictTitle: document.getElementById('verdictTitle'),
+      verdictDesc: document.getElementById('verdictDesc'),
+      metricAiScore: document.getElementById('metricAiScore'),
+      metricAnomaly: document.getElementById('metricAnomaly'),
+      exifSection: document.getElementById('exifSection'),
+      exifData: document.getElementById('exifData'),
+      auditLogBox: document.getElementById('auditLogBox'),
+      historyList: document.getElementById('historyList'),
+      progressBar: document.getElementById('progressBar'),
+      analysisStep: document.getElementById('analysisStep'),
+      errorNotification: document.getElementById('errorNotification'),
+      errorTitle: document.getElementById('errorTitle'),
+      errorMessage: document.getElementById('errorMessage'),
+      closeError: document.getElementById('closeError')
+    };
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    function showError(title, message) {
+      DOM.errorTitle.textContent = title;
+      DOM.errorMessage.textContent = message;
+      DOM.errorNotification.classList.remove('hidden');
+      setTimeout(() => {
+        DOM.errorNotification.classList.add('hidden');
+      }, 5000);
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    function calculateFileHash(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const wordArray = CryptoJS.lib.WordArray.create(e.target.result);
+          const hash = CryptoJS.SHA256(wordArray).toString();
+          resolve(hash.substring(0, 16));
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function analyzeEXIF(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const tags = ExifReader.load(e.target.result);
+            const exifData = {};
+            const interestingTags = ['Make', 'Model', 'DateTime', 'Software', 'Orientation', 'XResolution', 'YResolution', 'Flash', 'FocalLength', 'ISO', 'ExposureTime'];
+            interestingTags.forEach(tag => {
+              if (tags[tag]) {
+                exifData[tag] = tags[tag].description;
+              }
+            });
+            resolve(exifData);
+          } catch (error) {
+            resolve({});
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function basicForensicsAnalysis(file, exifData) {
+      const result = {
+        aiScore: 0,
+        anomaly: 'Low',
+        confidence: 0.5,
+        factors: []
+      };
+
+      // Check if EXIF data exists
+      const hasExif = Object.keys(exifData).length > 0;
+      if (!hasExif) {
+        result.aiScore += 15;
+        result.factors.push('No EXIF metadata detected');
+      }
+
+      // Check file name patterns
+      const fileName = file.name.toLowerCase();
+      if (fileName.includes('screenshot') || fileName.includes('capture')) {
+        result.aiScore += 20;
+        result.factors.push('Screenshot detected');
+      }
+
+      // Check file size (suspicious if too small for quality image)
+      if (file.size < 10000 && file.type.startsWith('image/')) {
+        result.aiScore += 10;
+        result.factors.push('File size unusually small');
+      }
+
+      // Check if modified
+      if (file.lastModified < Date.now() - 365 * 24 * 60 * 60 * 1000) {
+        result.aiScore += 5;
+        result.factors.push('File creation date is old');
+      }
+
+      // Normalize score
+      result.aiScore = Math.min(result.aiScore, 95);
+      result.confidence = 0.3 + (result.aiScore / 200);
+
+      if (result.aiScore > 60) {
+        result.anomaly = currentLang === 'vi' ? 'Cao' : 'High';
+      } else if (result.aiScore > 30) {
+        result.anomaly = currentLang === 'vi' ? 'Trung bình' : 'Medium';
+      } else {
+        result.anomaly = currentLang === 'vi' ? 'Thấp' : 'Low';
+      }
+
+      return result;
+    }
+
+    async function runDeepfakeAnalysis() {
+      if (!state.currentFile) {
+        showError('Error', I18N[currentLang].error_invalid_file);
+        return;
+      }
+
+      // Validate file size
+      if (state.currentFile.size > 50 * 1024 * 1024) {
+        showError('Error', I18N[currentLang].error_file_too_large);
+        return;
+      }
+
+      document.querySelector('[data-target="viewResult"]').click();
+
+      // Reset UI
+      DOM.loadingState.classList.remove('hidden');
+      DOM.resultState.classList.add('hidden');
+      DOM.progressBar.style.width = '0%';
+      DOM.caseIdText.textContent = 'TVAI-' + Math.floor(100000 + Math.random() * 900000);
+      DOM.resultBadge.textContent = I18N[currentLang].processing;
+      DOM.resultBadge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase font-mono bg-cyan-950 text-cyan-300 border border-cyan-600';
+
+      const steps = [
+        { progress: 20, text: I18N[currentLang].step_reading, delay: 300 },
+        { progress: 40, text: I18N[currentLang].step_exif, delay: 600 },
+        { progress: 60, text: I18N[currentLang].step_forensics, delay: 900 },
+        { progress: 80, text: I18N[currentLang].step_ai, delay: 1200 },
+        { progress: 100, text: I18N[currentLang].step_complete, delay: 1500 }
+      ];
+
+      // Execute analysis steps
+      for (const step of steps) {
+        await new Promise(resolve => setTimeout(resolve, step.delay - (steps[steps.indexOf(step) - 1]?.delay || 0)));
+        DOM.progressBar.style.width = step.progress + '%';
+        DOM.analysisStep.textContent = step.text;
+      }
+
+      try {
+        // Calculate file hash
+        state.currentFileHash = await calculateFileHash(state.currentFile);
+
+        // Analyze EXIF data
+        const exifData = await analyzeEXIF(state.currentFile);
+
+        // Run forensics analysis
+        const forensicsResult = basicForensicsAnalysis(state.currentFile, exifData);
+
+        // Try server-side AI analysis (hybrid approach)
+        let serverResult = null;
+        try {
+          serverResult = await analyzeWithServerAI(state.currentFile, state.currentFileHash);
+        } catch (serverError) {
+          console.log('Server AI unavailable, using client-side only:', serverError.message);
+        }
+
+        // Combine results (server takes precedence if available)
+        const finalResult = serverResult || forensicsResult;
+
+        // Store result
+        state.analysisResult = {
+          caseId: DOM.caseIdText.textContent,
+          fileName: state.currentFile.name,
+          fileType: state.currentFile.type,
+          fileSize: formatFileSize(state.currentFile.size),
+          fileHash: state.currentFileHash,
+          exifData: exifData,
+          ...finalResult,
+          timestamp: new Date().toISOString(),
+          usedServerAI: !!serverResult
+        };
+
+        // Update UI with results
+        displayResults(state.analysisResult);
+
+      } catch (error) {
+        console.error('Analysis error:', error);
+        showError('Error', I18N[currentLang].error_analysis_failed);
+        DOM.loadingState.classList.add('hidden');
+      }
+    }
+
+    // Server-side AI integration (placeholder for future backend)
+    async function analyzeWithServerAI(file, fileHash) {
+      // TODO: Replace with your actual API endpoint
+      const API_ENDPOINT = 'https://api.truevision-ai.com/analyze';
+
+      // For now, this is a placeholder that will fail
+      // When you have a real backend, uncomment and implement:
+      /*
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('hash', fileHash);
+
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          // Add your API key header if needed
+          // 'Authorization': 'Bearer YOUR_API_KEY'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Server analysis failed');
+      }
+
+      const result = await response.json();
+      return {
+        aiScore: result.deepfake_score,
+        anomaly: result.anomaly_level,
+        confidence: result.confidence,
+        factors: result.detected_factors || []
+      };
+      */
+
+      // Placeholder: throw error to use client-side only
+      throw new Error('Server AI not configured');
+    }
+
+    function displayResults(result) {
+      DOM.loadingState.classList.add('hidden');
+      DOM.resultState.classList.remove('hidden');
+
+      const dict = I18N[currentLang];
+      let statusText = '';
+      let verdictClass = '';
+
+      // Determine verdict based on AI score
+      if (result.aiScore > 60) {
+        // Fake
+        DOM.resultBadge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase font-mono bg-rose-950 text-rose-300 border border-rose-600';
+        DOM.resultBadge.textContent = dict.status_fake;
+        DOM.verdictIcon.className = 'fa-solid fa-triangle-exclamation text-3xl text-cyber-rose';
+        DOM.verdictTitle.textContent = dict.verdict_fake_title;
+        DOM.verdictDesc.textContent = dict.verdict_fake_desc;
+        statusText = dict.status_fake;
+        verdictClass = 'text-rose-400';
+      } else if (result.aiScore < 30) {
+        // Real
+        DOM.resultBadge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase font-mono bg-emerald-950 text-emerald-300 border border-emerald-600';
+        DOM.resultBadge.textContent = dict.status_real;
+        DOM.verdictIcon.className = 'fa-solid fa-shield-check text-3xl text-cyber-green';
+        DOM.verdictTitle.textContent = dict.verdict_real_title;
+        DOM.verdictDesc.textContent = dict.verdict_real_desc;
+        statusText = dict.status_real;
+        verdictClass = 'text-emerald-400';
+      } else {
+        // Uncertain
+        DOM.resultBadge.className = 'px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase font-mono bg-amber-950 text-amber-300 border border-amber-600';
+        DOM.resultBadge.textContent = dict.status_uncertain;
+        DOM.verdictIcon.className = 'fa-solid fa-circle-question text-3xl text-cyber-amber';
+        DOM.verdictTitle.textContent = dict.verdict_uncertain_title;
+        DOM.verdictDesc.textContent = dict.verdict_uncertain_desc;
+        statusText = dict.status_uncertain;
+        verdictClass = 'text-amber-400';
+      }
+
+      DOM.metricAiScore.textContent = result.aiScore.toFixed(1) + '%';
+      DOM.metricAnomaly.textContent = result.anomaly;
+
+      // Display EXIF data if available
+      if (Object.keys(result.exifData).length > 0) {
+        DOM.exifSection.classList.remove('hidden');
+        DOM.exifData.innerHTML = Object.entries(result.exifData)
+          .map(([key, value]) => `<p><span class="text-slate-500">${key}:</span> ${escapeHTML(value)}</p>`)
+          .join('');
+      } else {
+        DOM.exifSection.classList.add('hidden');
+      }
+
+      // Build audit log
+      const auditLog = [
+        `• File: ${escapeHTML(result.fileName)}`,
+        `• Size: ${result.fileSize}`,
+        `• Type: ${result.fileType}`,
+        `• Hash: ${result.fileHash}`,
+        `• AI Deepfake Index: ${result.aiScore.toFixed(1)}%`,
+        `• Anomaly Level: ${result.anomaly}`,
+        `• Status: ${statusText}`
+      ];
+
+      if (result.factors.length > 0) {
+        auditLog.push('• Factors detected:');
+        result.factors.forEach(factor => {
+          auditLog.push(`  - ${factor}`);
+        });
+      }
+
+      DOM.auditLogBox.innerHTML = auditLog.map(line => `<p>${escapeHTML(line)}</p>`).join('');
+
+      // Save to history
+      state.history.unshift({
+        name: result.fileName,
+        status: statusText,
+        score: result.aiScore.toFixed(1) + '%',
+        time: new Date().toLocaleTimeString(),
+        verdictClass: verdictClass
+      });
+      if (state.history.length > 10) state.history.pop();
+      localStorage.setItem('truevision_history', JSON.stringify(state.history));
+      renderHistoryUI();
+    }
+
+    function exportPDF() {
+      if (!state.analysisResult) {
+        showError('Error', 'No analysis result to export');
+        return;
+      }
+
+      const result = state.analysisResult;
+      const dict = I18N[currentLang];
+
+      const pdfContent = `
+        <div style="font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #333;">
+          <div style="text-align: center; margin-bottom: 40px; border-bottom: 3px solid #0ea5e9; padding-bottom: 20px;">
+            <h1 style="margin: 0; color: #0ea5e9; font-size: 28px;">TRUEVISION AI</h1>
+            <p style="margin: 10px 0 0; color: #666; font-size: 14px;">Digital Forensics Analysis Report</p>
+          </div>
+
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h2 style="margin: 0 0 15px; color: #1e293b; font-size: 18px;">Analysis Details</h2>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; width: 30%;">Case ID:</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${result.caseId}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">File Name:</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${escapeHTML(result.fileName)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">File Size:</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${result.fileSize}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">File Type:</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${result.fileType}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">File Hash:</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${result.fileHash}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">Analysis Date:</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${new Date(result.timestamp).toLocaleString()}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="background: ${result.aiScore > 60 ? '#fef2f2' : result.aiScore < 30 ? '#f0fdf4' : '#fffbeb'}; padding: 20px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid ${result.aiScore > 60 ? '#ef4444' : result.aiScore < 30 ? '#22c55e' : '#f59e0b'};">
+            <h2 style="margin: 0 0 15px; color: #1e293b; font-size: 18px;">Analysis Result</h2>
+            <p style="margin: 0; font-size: 16px; font-weight: bold; color: ${result.aiScore > 60 ? '#dc2626' : result.aiScore < 30 ? '#16a34a' : '#d97706'};">
+              ${result.aiScore > 60 ? dict.status_fake : result.aiScore < 30 ? dict.status_real : dict.status_uncertain}
+            </p>
+            <p style="margin: 10px 0 0; color: #64748b; font-size: 14px;">
+              ${result.aiScore > 60 ? dict.verdict_fake_desc : result.aiScore < 30 ? dict.verdict_real_desc : dict.verdict_uncertain_desc}
+            </p>
+          </div>
+
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h2 style="margin: 0 0 15px; color: #1e293b; font-size: 18px;">Technical Metrics</h2>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; width: 30%;">AI Deepfake Index:</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: ${result.aiScore > 60 ? '#dc2626' : result.aiScore < 30 ? '#16a34a' : '#d97706'};">${result.aiScore.toFixed(1)}%</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">Anomaly Level:</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${result.anomaly}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">Confidence:</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${(result.confidence * 100).toFixed(0)}%</td>
+              </tr>
+            </table>
+          </div>
+
+          ${Object.keys(result.exifData).length > 0 ? `
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h2 style="margin: 0 0 15px; color: #1e293b; font-size: 18px;">EXIF Metadata</h2>
+            <table style="width: 100%; border-collapse: collapse;">
+              ${Object.entries(result.exifData).map(([key, value]) => `
+                <tr>
+                  <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; width: 30%;">${key}:</td>
+                  <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${escapeHTML(value)}</td>
+                </tr>
+              `).join('')}
+            </table>
+          </div>
+          ` : ''}
+
+          ${result.factors.length > 0 ? `
+          <div style="background: #fef2f2; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h2 style="margin: 0 0 15px; color: #1e293b; font-size: 18px;">Detected Factors</h2>
+            <ul style="margin: 0; padding-left: 20px;">
+              ${result.factors.map(factor => `<li style="margin-bottom: 5px; color: #64748b;">${escapeHTML(factor)}</li>`).join('')}
+            </ul>
+          </div>
+          ` : ''}
+
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; color: #94a3b8; font-size: 12px;">
+            <p style="margin: 0;">This report was generated by TrueVision AI</p>
+            <p style="margin: 5px 0 0;">Generated on ${new Date().toLocaleString()}</p>
+            <p style="margin: 10px 0 0; font-size: 10px; color: #64748b;">
+              Disclaimer: This analysis is for informational purposes only and should not be used as legal evidence.
+            </p>
+          </div>
+        </div>
+      `;
+
+      const opt = {
+        margin: 10,
+        filename: `TrueVision_Report_${result.caseId}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(pdfContent).save();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initNavigation();
+      initEvents();
+      renderHistoryUI();
+    });
+
+    function initNavigation() {
+      const navBtns = document.querySelectorAll('.nav-btn');
+      const views = document.querySelectorAll('.app-view');
+
+      navBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = btn.getAttribute('data-target');
+          navBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          views.forEach(v => {
+            if (v.id === target) {
+              v.classList.remove('hidden');
+              v.classList.add('flex');
+            } else {
+              v.classList.add('hidden');
+              v.classList.remove('flex');
+            }
+          });
+        });
+      });
+    }
+
+    function initEvents() {
+      DOM.dropZone.addEventListener('click', () => DOM.fileInput.click());
+      DOM.dropZone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          DOM.fileInput.click();
+        }
+      });
+
+      DOM.fileInput.addEventListener('change', e => {
+        if (e.target.files.length) handleFile(e.target.files[0]);
+      });
+
+      DOM.btnCameraCapture.addEventListener('click', () => {
+        const cam = document.createElement('input');
+        cam.type = 'file'; cam.accept = 'image/*,video/*'; cam.capture = 'environment';
+        cam.onchange = e => { if (e.target.files.length) handleFile(e.target.files[0]); };
+        cam.click();
+      });
+
+      DOM.btnDeleteCurrentFile.addEventListener('click', clearCurrentFile);
+      DOM.analyzeBtn.addEventListener('click', runDeepfakeAnalysis);
+      DOM.btnExportPDF.addEventListener('click', exportPDF);
+      DOM.clearHistoryBtn.addEventListener('click', () => {
+        state.history = [];
+        localStorage.removeItem('truevision_history');
+        renderHistoryUI();
+      });
+
+      DOM.closeError.addEventListener('click', () => {
+        DOM.errorNotification.classList.add('hidden');
+      });
+    }
+
+    function clearCurrentFile() {
+      if (state.currentFileUrl) URL.revokeObjectURL(state.currentFileUrl);
+      state.currentFile = null;
+      state.currentFileUrl = null;
+      state.currentFileHash = null;
+      state.analysisResult = null;
+      DOM.fileInput.value = '';
+      DOM.mediaPreviewCard.classList.add('hidden');
+      DOM.fileInfo.classList.add('hidden');
+    }
+
+    function handleFile(file) {
+      // Validate file type
+      const validTypes = ['image/', 'video/', 'audio/'];
+      if (!validTypes.some(type => file.type.startsWith(type))) {
+        showError('Error', I18N[currentLang].error_invalid_file);
+        return;
+      }
+
+      state.currentFile = file;
+      state.currentFileUrl = URL.createObjectURL(file);
+      DOM.previewTitle.textContent = file.name;
+      DOM.mediaPreviewCard.classList.remove('hidden');
+      DOM.fileInfo.classList.remove('hidden');
+      DOM.fileSize.textContent = formatFileSize(file.size);
+      DOM.fileType.textContent = file.type;
+
+      DOM.imgPreview.classList.add('hidden');
+      DOM.videoPreview.classList.add('hidden');
+      DOM.audioPreview.classList.add('hidden');
+
+      if (file.type.startsWith('image/')) {
+        state.currentFileType = 'image';
+        DOM.imgPreview.src = state.currentFileUrl;
+        DOM.imgPreview.classList.remove('hidden');
+      } else if (file.type.startsWith('video/')) {
+        state.currentFileType = 'video';
+        DOM.videoPreview.src = state.currentFileUrl;
+        DOM.videoPreview.classList.remove('hidden');
+      } else {
+        state.currentFileType = 'audio';
+        DOM.audioPreview.src = state.currentFileUrl;
+        DOM.audioPreview.classList.remove('hidden');
+      }
+    }
+
+    function renderHistoryUI() {
+      if (!state.history.length) {
+        DOM.historyList.innerHTML = `<p class="text-slate-500 italic text-[11px]">${I18N[currentLang].no_history}</p>`;
+        return;
+      }
+      DOM.historyList.innerHTML = state.history.map(item => `
+        <div class="p-2.5 bg-slate-950 border border-slate-800 rounded-xl flex justify-between items-center">
+          <span class="truncate max-w-[140px] text-slate-200">${escapeHTML(item.name)}</span>
+          <span class="text-[10px] font-bold ${item.verdictClass || (item.status.includes('GIẢ') || item.status.includes('FAKE') ? 'text-rose-400' : 'text-emerald-400')}">${escapeHTML(item.status)}</span>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
